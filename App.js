@@ -10,7 +10,7 @@ import { mapping, light as lightTheme } from '@eva-design/eva';
 import { ApplicationProvider, Layout } from 'react-native-ui-kitten';
 import { Provider } from 'react-redux';
 
-import HomeScreen from './screens/HomeScreen';
+import TodoView from './screens/TodoView';
 import store from './store/index';
 
 export default function App(props) {
@@ -32,7 +32,7 @@ export default function App(props) {
           theme={lightTheme}>
           <Layout style={styles.container}>
             <StatusBar backgroundColor="#c51162" />
-            <HomeScreen />
+            <TodoView />
           </Layout>
         </ApplicationProvider>
       </Provider>

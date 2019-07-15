@@ -4,26 +4,28 @@ import {
   DELETE_TODO,
 } from '../constants/Actions';
 
+import store from '../store/index.js';
+
 const todos = {};
 
 export function createTodo(todo) {
   return (dispatch) => {
-    dispatch({ type: CREATE_TODO, payload: todos });
+    dispatch({ type: CREATE_TODO, payload: todo });
   };
 }
 
-export function updateTodo(id, name) {
+export function updateTodo(todo) {
   return (dispatch) => {
-    dispatch({ type: UPDATE_TODO, payload: tods });
+    dispatch({ type: UPDATE_TODO, payload: todo });
   };
 }
 
 export function deleteTodo(id) {
   return (dispatch) => {
-    dispatch({ type: DELETE_TODO, payload: todos });
+    dispatch({ type: DELETE_TODO, payload: id });
   };
 }
 
 export function getTodos() {
-  return todos;
+  return store.getState().todos;
 }

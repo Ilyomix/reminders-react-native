@@ -9,10 +9,22 @@ import {
 
 import { TopNavigation, TopNavigationProps } from 'react-native-ui-kitten';
 import { LinearGradient } from 'expo-linear-gradient';
+import { connect } from 'react-redux';
 
 import TodoList from '../components/TodoList';
 
-export default function HomeScreen(props) {
+import { createTodo, updateTodo, deleteTodo, getTodos } from '../actions/todoListActions';
+
+export function TodoView(props) {
+  const {
+    handleAddTodoItem,
+    handleDeleteTodoItem,
+    handleUpdateTodoItem,
+    handleGetTodos,
+  } = props;
+
+  const currentTodosTasksNumber = handleGetTodos() && handleGetTodos().length;
+
   return (
     <View style={{ flex: 1 }}>
       <LinearGradient
@@ -24,13 +36,18 @@ export default function HomeScreen(props) {
       >
         <TopNavigation
           title='Reminders'
-          subtitle='0 reminder(s) in progress'
+          subtitle={`${currentTodosTasksNumber} reminder${currentTodosTasksNumber > 1 ? 's' : ''} in progress`}
           titleStyle={styleTopNavigation.title}
           subtitleStyle={styleTopNavigation.subtitle}
           style={styleTopNavigation.main}
         />
       </LinearGradient>
-      <TodoList />
+      <TodoList 
+        addTodoItem={handleAddTodoItem}
+			  deleteTodoItem={handleDeleteTodoItem}
+        updateTodoItem={handleUpdateTodoItem}
+        todoItems={handleGetTodos}
+      />
     </View>
   );
 };
@@ -56,3 +73,20 @@ const styleTopNavigationLinearGradient = StyleSheet.create({
 
 const styleBottomNavigation = StyleSheet.create({
 });
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    handleAddTodoItem: (item) => dispatch(createTodo(item)),
+    handleDeleteTodoItem: (id) => dispatch(deleteTodo(id)),
+    handleUpdateTodoItem: (item) => dispatch(updateTodo(item)),
+    handleGetTodos: () => (getTodos()),
+  }
+}
+
+const mapStateToProps = state => {
+  return state
+}
+
+const TodoViewScreen = connect(mapStateToProps, mapDispatchToProps)(TodoView)
+
+export default TodoViewScreen;

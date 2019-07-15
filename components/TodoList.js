@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import { Layout, CheckBox, Input, Button } from 'react-native-ui-kitten';
+import { Layout, CheckBox, Input, Button, ListItem } from 'react-native-ui-kitten';
 import { SimpleAnimation } from 'react-native-simple-animations';
 import { Text } from 'react-native-paper';
 import Swipeable from 'react-native-swipeable-row';
@@ -18,57 +18,105 @@ import Divider from './Divider';
 
 class TodoList extends Component {
 	state = { 
-		isAddingTodoElement: true,
+		isAddingTodoElement: false,
+		todoContentToAdd: '',
 	};
-
-	leftContent = (
-		<View style={stylesTodoActionSwipeLeft.main}>
-			<Icon
-				name="ios-checkmark"
-				color="#fff"
-				size={48}
-			/>
-			<Text style={stylesTodoActionSwipeLeft.label}>
-				Done
-			</Text>
-		</View>
-	);
- 
-	rightButtons = [
-		<View style={stylesTodoActionButtons.main}>
-			<TouchableOpacity
-				style={stylesEditTodoButton.main}
-			>
-				<IconFR
-					name="edit"
-					color="#fff"
-					size={17}
-				/>
-			</TouchableOpacity>
-		</View>,
-		<View style={stylesTodoActionButtons.main}>
-			<TouchableOpacity
-				style={stylesDeleteTodoButton.main}
-			>
-				<Icon
-					name="ios-close"
-					color="#fff"
-					size={36}
-				/>
-			</TouchableOpacity>
-		</View>,
-	];
+	
+	generateTodoId = function *() {
+		const id = `0x${Math.random().toString(16).substr(2, 18)}`;
+		while (true) {
+			yield id;
+		}
+	}
 
 	handleToggleAddingTodo = () => {
 		const { isAddingTodoElement } = this.state;
 		this.setState({
 			isAddingTodoElement: !isAddingTodoElement,
 		});
+	}
 
+	handleAddTodoItem = () => {
+		const { todoContentToAdd } = this.state;
+		const { addTodoItem } = this.props;
+		const todoId = this.generateTodoId().next().value;
+		addTodoItem({
+			name: todoContentToAdd,
+			done: false,
+			id: todoId,
+		});
+
+		this.setState({
+			todoContentToAdd: '',
+		})
+	}
+	
+	handleUpdateTodoStatusItem = (checked, id) => {
+		const { updateTodoItem } = this.props;
+		updateTodoItem({ done: checked, id });
+	}
+
+	handleAddTodoItemContent = (inputValue) => {
+		this.setState({
+			todoContentToAdd: inputValue,
+		})
+	};
+
+	generateSwipeLeftAction = (elem) => {
+		return (
+			<View style={stylesTodoActionSwipeLeft.main}>
+				<Icon
+					name="ios-checkmark"
+					color="#fff"
+					size={48}
+				/>
+				<Text style={stylesTodoActionSwipeLeft.label}>
+					Done
+				</Text>
+			</View>
+		)
+	}
+	generateActionButton = (todoElem) => {
+		const { id } = todoElem;
+		const { deleteTodoItem } = this.props;
+
+		const handleDeleteTodoItem = () => deleteTodoItem(id);
+
+		return (
+			[
+				<View style={stylesTodoActionButtons.main}>
+					<TouchableOpacity
+						style={stylesEditTodoButton.main}
+					>
+						<IconFR
+							name="edit"
+							color="#fff"
+							size={17}
+						/>
+					</TouchableOpacity>
+				</View>,
+				<View style={stylesTodoActionButtons.main}>
+					<TouchableOpacity
+						style={stylesDeleteTodoButton.main}
+						onPress={handleDeleteTodoItem}
+					>
+						<Icon
+							name="ios-close"
+							color="#fff"
+							size={36}
+						/>
+					</TouchableOpacity>
+				</View>,
+			]
+		)
 	}
 
 	addTodoInput = () => {
-		const { isAddingTodoElement } = this.state;
+		const { 
+			isAddingTodoElement,
+			todoContentToAdd,
+		} = this.state;
+
 		const addTodoInput = (
 			isAddingTodoElement &&
 			<SimpleAnimation
@@ -77,18 +125,32 @@ class TodoList extends Component {
 				distance={12}
 				movementType="slide"
 			>
-				<Text style={stylesAddTodoPrompt.main}>
-					Add your reminder
-				</Text>
 				<View style={stylesAddTodoInputWrapper.main}>
-					<Input placeholder="Enter your reminder" size="medium" style={stylesAddTodoInput.input} />
+					<Input 
+						placeholder="Enter your reminder"
+						size="medium" 
+						value={todoContentToAdd}
+						style={stylesAddTodoInput.input}
+						onChangeText={this.handleAddTodoItemContent}
+					/>
 					<TouchableOpacity
 						style={stylesAddTodoInputButton.main}
-						>
+						onPress={this.handleAddTodoItem}
+					>
 						<Icon
-							name="ios-checkmark"
+							name="ios-add"
 							color="#fff"
-							size={36}
+							size={30}
+						/>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={stylesCloseTodoInputButton.main}
+						onPress={this.handleToggleAddingTodo}
+					>
+						<Icon
+							name="ios-return-left"
+							color="#fff"
+							size={30}
 						/>
 					</TouchableOpacity>
 				</View>
@@ -98,9 +160,90 @@ class TodoList extends Component {
 		return addTodoInput;
 	}
 
+	getTodos = () => {
+		const { todoItems } = this.props;
+		const { isAddingTodoElement } = this.state;
+		const feed = todoItems();
+	
+		const todosElements = feed && feed.length ?
+		feed.map((elem, index) => {
+			const { name, done, id } = elem;
+			const actionButtons = this.generateActionButton(elem);
+			const leftContent = this.generateSwipeLeftAction(elem);
+			const leftActionRelease = () => this.handleUpdateTodoStatusItem(!done, id);
+
+			return (
+				<Swipeable
+					leftContent={leftContent}
+					rightButtons={actionButtons}
+					onLeftActionRelease={leftActionRelease}
+					rightButtonWidth={64}
+					key={`todo-items-${index + 1}`}
+				>
+					<CheckBox
+						style={done ? stylesTodoCard.completed : stylesTodoCard.main}
+						text={name}
+						checked={done}
+						onChange={(e) => this.handleUpdateTodoStatusItem(e, id)}
+					/>
+				</Swipeable>
+			);
+		}) : 
+		this.generateNoDataMessage();
+
+		return todosElements;
+	}
+
+	generateNoDataMessage = () => {
+		const { isAddingTodoElement } = this.state;
+		return (
+			!isAddingTodoElement && (
+				<View
+					style={{
+						flexDirection: 'row',
+						padding: 14,
+						backgroundColor: '#fafafa'
+					}}
+				>
+					<ListItem
+						style={{
+							flex: 7,
+							backgroundColor: '#fafafa'
+						}}
+						title='No reminders yet'
+						description='You can add a reminders using the button on the bottom'	
+					/>
+					<Button
+						style={{
+							width: 120,
+							textAlign: 'center'
+						}}
+						onPress={this.handleToggleAddingTodo}
+					>
+						{'New note'}
+					</Button>
+				</View>
+			)
+		)
+	}
+
 	render() {
 		const { isAddingTodoElement } = this.state;
 		const addTodoInput = this.addTodoInput();
+		const todosElements = this.getTodos();
+		const FABAddTodo = (
+			!isAddingTodoElement &&
+			<TouchableOpacity
+				style={stylesAddTodoButton.main}
+				onPress={this.handleToggleAddingTodo}
+			>
+				<Icon
+					name="ios-add"
+					color="#fff"
+					size={36}
+				/>
+			</TouchableOpacity>
+		)
 
 		return (
 			<View style={stylesTodoList.main}>
@@ -108,28 +251,9 @@ class TodoList extends Component {
 					{ addTodoInput }
 				</View>
 				<ScrollView style={styleContent.main}>
-					<Swipeable
-						leftContent={this.leftContent}
-						rightButtons={this.rightButtons}
-						rightButtonWidth={64}
-					>
-						<CheckBox
-							style={stylesTodoCard.main}
-							text='Place your text'
-							checked
-						/>
-					</Swipeable>
+					{ todosElements }
 				</ScrollView>
-				<TouchableOpacity
-					style={stylesAddTodoButton.main}
-					onPress={this.handleToggleAddingTodo}
-				>
-					<Icon
-						name="ios-add"
-						color="#fff"
-						size={36}
-					/>
-				</TouchableOpacity>
+				{FABAddTodo}
 			</View>
 		);
 	}
@@ -145,11 +269,19 @@ const stylesTodoList = StyleSheet.create({
 const stylesTodoCard = StyleSheet.create({
     main: {
         marginTop: 14,
-		marginBottom: 14,
+		marginBottom: 0,
 		backgroundColor: '#f5f6fa',
 		borderRadius: 8,
 		padding: 21,
-}
+	},
+	completed: {
+        marginTop: 14,
+		marginBottom: 0,
+		backgroundColor: 'rgba(245, 246, 250, 0.4)',
+		borderRadius: 8,
+		padding: 21,
+		opacity: 0.75,
+	}
 });
 
 const styleContent = StyleSheet.create({
@@ -164,35 +296,21 @@ const styleTodoElement = StyleSheet.create({
 		margin: 14,
 		borderRadius: 7,
 		padding: 14,
-		shadowOffset: {
-			width: 1,
-			height: 1
-		},
-		shadowOpacity: 0.08,
-		shadowRadius: 10.41,
-		elevation: 2
     }
 });
 
 const stylesAddTodoButton = StyleSheet.create({
     main: {
-      backgroundColor: '#196ffa',
-			borderColor: '#196ffa',
-			borderRadius: 50,
-			height: 64,
-			width: 64,
-			alignItems: 'center',
-			justifyContent: 'center',
-			position: 'absolute',
-			bottom: 35,
-			right: 35,
-				shadowOffset: {
-				width: 1,
-				height: 1
-			},
-			shadowOpacity: 0.38,
-			shadowRadius: 10.41,
-			elevation: 2
+     	backgroundColor: '#196ffa',
+		borderColor: '#196ffa',
+		borderRadius: 50,
+		height: 64, 
+		width: 64,
+		alignItems: 'center',
+		justifyContent: 'center',
+		position: 'absolute',
+		bottom: 35,
+		right: 35,
     },
 	text: {
 		color: 'white',
@@ -202,17 +320,39 @@ const stylesAddTodoButton = StyleSheet.create({
 const stylesAddTodoInputWrapper = StyleSheet.create({
 	main: {
 		flexDirection: 'row',
+		alignItems: 'center',
 	}
 });
 
 const stylesAddTodoInputButton = StyleSheet.create({
     main: {
-		flex: 1,
       	backgroundColor: '#196ffa',
 		borderColor: '#196ffa',
-		borderRadius: 5,
+		borderRadius: 50,
 		marginRight: 14,
+		width: 46,
+		height: 46,
 		marginTop: 14,
+		marginLeft: 8,
+		marginBottom: 14,
+		alignItems: 'center',
+		justifyContent: 'center',
+    },
+	text: {
+		color: 'white',
+	}
+});
+
+const stylesCloseTodoInputButton = StyleSheet.create({
+    main: {
+      	backgroundColor: '#e74c3c',
+		borderColor: '#e74c3c',
+		borderRadius: 50,
+		marginRight: 14,
+		width: 46,
+		height: 46,
+		marginTop: 14,
+		marginLeft: 4,
 		marginBottom: 14,
 		alignItems: 'center',
 		justifyContent: 'center',
@@ -227,20 +367,9 @@ const stylesAddTodoInput = StyleSheet.create({
 		margin: 14,
 		marginTop: 14,
 		marginBottom: 14,
-		flex: 6,
+		borderRadius: 50,
+		flex: 1,
 		flexDirection: 'row',
-	}
-});
-
-const stylesAddTodoPrompt = StyleSheet.create({
-	main: {
-		opacity: 0.8,
-		paddingLeft: 14,
-		paddingRight: 14,
-		marginBottom: 0,
-		marginTop: 14,
-		fontWeight: '100',
-		fontSize: 28, 
 	}
 });
 
@@ -248,6 +377,7 @@ const stylesAddTodoPromptWrapper = StyleSheet.create({
 	main: {
 		padding: 14,
 		marginBottom: -28,
+		marginTop: 14,
 	}
 })
 
