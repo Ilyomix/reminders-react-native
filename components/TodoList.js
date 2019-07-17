@@ -29,6 +29,7 @@ class TodoList extends Component {
 	
 	swipeable = [];
 	editTodoItemInput = null;
+	addTodoInputRef = null;
 
 	swipeableRecenter = (id) => {
 		id ?
@@ -37,7 +38,6 @@ class TodoList extends Component {
 	}
 
 	swipeableEditFocus = () => {
-		this.editTodoItemInput.focus();
 		this.swipeableRecenter();
 	}
 
@@ -50,6 +50,8 @@ class TodoList extends Component {
 
 	handleToggleAddingTodo = () => {
 		const { isAddingTodoElement } = this.state;
+
+		if (isAddingTodoElement) this.addTodoInputRef.focus();
 		this.setState({
 			isAddingTodoElement: !isAddingTodoElement,
 		});
@@ -60,6 +62,8 @@ class TodoList extends Component {
 		const { todoContentToAdd } = this.state;
 		const { addTodoItem } = this.props;
 		const todoId = this.generateTodoId().next().value;
+		if (!todoContentToAdd) return ;
+
 		addTodoItem({
 			name: todoContentToAdd,
 			done: false,
@@ -73,38 +77,42 @@ class TodoList extends Component {
 		this.swipeableRecenter();
 	}
 	
-	handleUpdateTodoStatusItem = (checked, id) => {
+	handleUpdateTodoStatusItem = (checked, id, name) => {
 		const { updateTodoItem } = this.props;
-		updateTodoItem({ done: checked, id });
+		updateTodoItem({ done: checked, id, name });
 		this.swipeableRecenter();
 	}
 
-	toggleUpdateTodoElement = (id) => {
+	toggleUpdateTodoElement = (id, fromBlur, name) => {
 		const { todoElementToEdit } = this.state;
 
 		this.setState({
 			todoElementToEdit: {
 				isEdit: !todoElementToEdit.isEdit,
 				id: todoElementToEdit.isEdit ? null : id,
-				content: null,
+				content: name,
 			}
 		});
-		console.log("=============+> ref", this.editTodoItemInput);
+
+		if (fromBlur) this.handleUpdateTodoElement(name);
+
 		this.swipeableEditFocus();
 	}
 
 	handleUpdateTodoElementContent = (content) => {
 		this.setState({
 			todoElementToEdit: {
+				...this.state.todoElementToEdit,
 				content,
 			}
 		});
 	}
 
-	handleUpdateTodoElement = () => {
+	handleUpdateTodoElement = (name) => {
 		const { id, content } = this.state.todoElementToEdit;
+		const { updateTodoItem } = this.props;
 
-		updateTodoItem({ name: content, id });
+		updateTodoItem({ name: content || name, id, done: false });
 		this.setState({
 			todoElementToEdit: {
 				id: null,
@@ -184,7 +192,8 @@ class TodoList extends Component {
 		} = this.state;
 
 		const isTodoAddInputIsEmpty = !todoContentToAdd.length;
-	
+		const swipeableRecenter = this.swipeableRecenter();
+
 		const addTodoInput = (
 			isAddingTodoElement &&
 			<SimpleAnimation
@@ -195,11 +204,14 @@ class TodoList extends Component {
 			>
 				<View style={stylesAddTodoInputWrapper.main}>
 					<Input 
+						ref={ref => this.addTodoInputRef = ref}
 						placeholder="Enter your reminder"
 						size="medium" 
 						value={todoContentToAdd}
 						style={stylesAddTodoInput.input}
 						onChangeText={this.handleAddTodoItemContent}
+						onFocus={swipeableRecenter}
+						onBlur={this.handleAddTodoItem}
 					/>
 					<TouchableOpacity
 						style={
@@ -236,7 +248,7 @@ class TodoList extends Component {
 	getTodos = () => {
 		const { todoItems } = this.props;
 		const { isAddingTodoElement } = this.state;
-		const { isEdit, id } = this.state.todoElementToEdit;
+		const { isEdit, id, content } = this.state.todoElementToEdit;
 		const idTodoItemToEdit = id;
 		const feed = todoItems();
 	
@@ -245,9 +257,9 @@ class TodoList extends Component {
 			const { name, done, id } = elem;
 			const actionButtons = this.generateActionButton(elem);
 			const leftContent = this.generateSwipeLeftAction(elem);
-			const leftActionRelease = () => this.handleUpdateTodoStatusItem(!done, id);
+			const leftActionRelease = () => this.handleUpdateTodoStatusItem(!done, id, name);
 			const rightActionRelease = () => this.swipeableRecenter(id);
-			const onBlurActionEditTodoItem = () => this.toggleUpdateTodoElement(id);
+			const onBlurActionEditTodoItem = () => this.toggleUpdateTodoElement(id, true, name);
 
 			const todoItem = (
 				!(isEdit && idTodoItemToEdit === id) ?
@@ -257,16 +269,20 @@ class TodoList extends Component {
 						textStyle={done ? stylesTodoCard.contentDone : stylesTodoCard.content}
 						text={name}
 						checked={done}
-						onChange={(e) => this.handleUpdateTodoStatusItem(e, id)}
+						onChange={(e) => this.handleUpdateTodoStatusItem(e, id, name)}
 					/>
 				</View> :
 				<View style={stylesTodoCard.element}>
 					<Input 
-						ref={ref => this.editTodoItemInput = ref}
+						ref={ref => {
+							this.editTodoItemInput = ref;
+							this.editTodoItemInput && this.editTodoItemInput.focus();
+						}}
 						placeholder="Edit your reminder"
 						size="medium" 
 						style={{ width: '100%', margin: -14, marginTop: -8, marginLeft: 0, marginRight: 0, borderRadius: 50 }}
-						value={name}
+						defaultValue={name}
+						onChangeText={(e) => this.handleUpdateTodoElementContent(e)}
 						onBlur={onBlurActionEditTodoItem}
 					/>
 				</View>

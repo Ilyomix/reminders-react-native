@@ -17,6 +17,7 @@ function todoListReducer(state = [], action) {
         if (x.id === action.payload.id) {
           const xCopy = x;
           xCopy.done = action.payload.done;
+          xCopy.name = action.payload.name;
         }
         return x;
       }));
