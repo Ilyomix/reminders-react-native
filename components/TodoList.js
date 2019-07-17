@@ -20,8 +20,27 @@ class TodoList extends Component {
 	state = { 
 		isAddingTodoElement: false,
 		todoContentToAdd: '',
+		todoElementToEdit: {
+			isEdit: false,
+			id: null,
+			content: null,
+		}
 	};
 	
+	swipeable = [];
+	editTodoItemInput = null;
+
+	swipeableRecenter = (id) => {
+		id ?
+		this.swipeable.filter(x => x.id !== id).map(x => x.method.recenter()) :
+		this.swipeable.map(x => x.method.recenter());
+	}
+
+	swipeableEditFocus = () => {
+		this.editTodoItemInput.focus();
+		this.swipeableRecenter();
+	}
+
 	generateTodoId = function *() {
 		const id = `0x${Math.random().toString(16).substr(2, 18)}`;
 		while (true) {
@@ -34,6 +53,7 @@ class TodoList extends Component {
 		this.setState({
 			isAddingTodoElement: !isAddingTodoElement,
 		});
+		this.swipeableRecenter();
 	}
 
 	handleAddTodoItem = () => {
@@ -49,11 +69,48 @@ class TodoList extends Component {
 		this.setState({
 			todoContentToAdd: '',
 		})
+
+		this.swipeableRecenter();
 	}
 	
 	handleUpdateTodoStatusItem = (checked, id) => {
 		const { updateTodoItem } = this.props;
 		updateTodoItem({ done: checked, id });
+		this.swipeableRecenter();
+	}
+
+	toggleUpdateTodoElement = (id) => {
+		const { todoElementToEdit } = this.state;
+
+		this.setState({
+			todoElementToEdit: {
+				isEdit: !todoElementToEdit.isEdit,
+				id: todoElementToEdit.isEdit ? null : id,
+				content: null,
+			}
+		});
+		console.log("=============+> ref", this.editTodoItemInput);
+		this.swipeableEditFocus();
+	}
+
+	handleUpdateTodoElementContent = (content) => {
+		this.setState({
+			todoElementToEdit: {
+				content,
+			}
+		});
+	}
+
+	handleUpdateTodoElement = () => {
+		const { id, content } = this.state.todoElementToEdit;
+
+		updateTodoItem({ name: content, id });
+		this.setState({
+			todoElementToEdit: {
+				id: null,
+				content: null,
+			}
+		});
 	}
 
 	handleAddTodoItemContent = (inputValue) => {
@@ -76,17 +133,26 @@ class TodoList extends Component {
 			</View>
 		)
 	}
+
 	generateActionButton = (todoElem) => {
 		const { id } = todoElem;
 		const { deleteTodoItem } = this.props;
 
-		const handleDeleteTodoItem = () => deleteTodoItem(id);
+		const handleDeleteTodoItem = () => {
+			this.swipeableRecenter();
+			this.swipeable = this.swipeable.filter(x => x.id !== id);
+
+			deleteTodoItem(id);
+		}
+
+		const handleEditTodoItem = () => this.toggleUpdateTodoElement(id);
 
 		return (
 			[
 				<View style={stylesTodoActionButtons.main}>
 					<TouchableOpacity
 						style={stylesEditTodoButton.main}
+						onPress={handleEditTodoItem}
 					>
 						<IconFR
 							name="edit"
@@ -117,6 +183,8 @@ class TodoList extends Component {
 			todoContentToAdd,
 		} = this.state;
 
+		const isTodoAddInputIsEmpty = !todoContentToAdd.length;
+	
 		const addTodoInput = (
 			isAddingTodoElement &&
 			<SimpleAnimation
@@ -134,8 +202,13 @@ class TodoList extends Component {
 						onChangeText={this.handleAddTodoItemContent}
 					/>
 					<TouchableOpacity
-						style={stylesAddTodoInputButton.main}
+						style={
+							isTodoAddInputIsEmpty ? 
+							stylesAddTodoInputButton.disabled :
+							stylesAddTodoInputButton.main
+						}
 						onPress={this.handleAddTodoItem}
+						disabled={isTodoAddInputIsEmpty}
 					>
 						<Icon
 							name="ios-add"
@@ -163,29 +236,61 @@ class TodoList extends Component {
 	getTodos = () => {
 		const { todoItems } = this.props;
 		const { isAddingTodoElement } = this.state;
+		const { isEdit, id } = this.state.todoElementToEdit;
+		const idTodoItemToEdit = id;
 		const feed = todoItems();
 	
 		const todosElements = feed && feed.length ?
-		feed.map((elem, index) => {
+		feed.sort((x, y) => x.done - y.done).map((elem, index) => {
 			const { name, done, id } = elem;
 			const actionButtons = this.generateActionButton(elem);
 			const leftContent = this.generateSwipeLeftAction(elem);
 			const leftActionRelease = () => this.handleUpdateTodoStatusItem(!done, id);
+			const rightActionRelease = () => this.swipeableRecenter(id);
+			const onBlurActionEditTodoItem = () => this.toggleUpdateTodoElement(id);
 
-			return (
-				<Swipeable
-					leftContent={leftContent}
-					rightButtons={actionButtons}
-					onLeftActionRelease={leftActionRelease}
-					rightButtonWidth={64}
-					key={`todo-items-${index + 1}`}
-				>
+			const todoItem = (
+				!(isEdit && idTodoItemToEdit === id) ?
+				<View style={{ opacity: done ? 0.25 : 1 }}>
 					<CheckBox
-						style={done ? stylesTodoCard.completed : stylesTodoCard.main}
+						style={stylesTodoCard.main}
+						textStyle={done ? stylesTodoCard.contentDone : stylesTodoCard.content}
 						text={name}
 						checked={done}
 						onChange={(e) => this.handleUpdateTodoStatusItem(e, id)}
 					/>
+				</View> :
+				<View style={stylesTodoCard.element}>
+					<Input 
+						ref={ref => this.editTodoItemInput = ref}
+						placeholder="Edit your reminder"
+						size="medium" 
+						style={{ width: '100%', margin: -14, marginTop: -8, marginLeft: 0, marginRight: 0, borderRadius: 50 }}
+						value={name}
+						onBlur={onBlurActionEditTodoItem}
+					/>
+				</View>
+			);
+
+			return (
+				<Swipeable
+					onRef={
+						ref => 
+						this.swipeable = [
+							...this.swipeable,
+							{
+								method: ref,
+								id,
+						}]
+					}
+					leftContent={leftContent}
+					rightButtons={actionButtons}
+					onLeftActionRelease={leftActionRelease}
+					onRightActionRelease={rightActionRelease}
+					rightButtonWidth={64}
+					key={`todo-items-${index + 1}`}
+				>
+					{ todoItem }
 				</Swipeable>
 			);
 		}) : 
@@ -216,7 +321,6 @@ class TodoList extends Component {
 					<Button
 						style={{
 							width: 120,
-							textAlign: 'center'
 						}}
 						onPress={this.handleToggleAddingTodo}
 					>
@@ -267,20 +371,41 @@ const stylesTodoList = StyleSheet.create({
 });
 
 const stylesTodoCard = StyleSheet.create({
-    main: {
-        marginTop: 14,
-		marginBottom: 0,
-		backgroundColor: '#f5f6fa',
-		borderRadius: 8,
-		padding: 21,
+	content: {
+		textDecorationLine: 'none',
+		fontSize: 18,
+		flexShrink: 1,
+		marginLeft: 14,
+		fontWeight: '100',
 	},
-	completed: {
+    contentDone: {
+		textDecorationLine: 'line-through',
+		fontSize: 18,
+		flexShrink: 1,
+		marginLeft: 14,
+		fontWeight: '100',
+	},
+	main: {
+		position: 'relative',
         marginTop: 14,
+		zIndex: 2,
 		marginBottom: 0,
 		backgroundColor: 'rgba(245, 246, 250, 0.4)',
 		borderRadius: 8,
 		padding: 21,
-		opacity: 0.75,
+		opacity: 1,
+	},
+	element: {
+		position: 'relative',
+		justifyContent: 'center',
+		alignItems: 'center',
+        marginTop: 14,
+		zIndex: 2,
+		marginBottom: 0,
+		backgroundColor: 'rgba(245, 246, 250, 0.65)',
+		borderRadius: 8,
+		padding: 21,
+		opacity: 1,
 	}
 });
 
@@ -326,6 +451,20 @@ const stylesAddTodoInputWrapper = StyleSheet.create({
 
 const stylesAddTodoInputButton = StyleSheet.create({
     main: {
+      	backgroundColor: '#196ffa',
+		borderColor: '#196ffa',
+		borderRadius: 50,
+		marginRight: 14,
+		width: 46,
+		height: 46,
+		marginTop: 14,
+		marginLeft: 8,
+		marginBottom: 14,
+		alignItems: 'center',
+		justifyContent: 'center',
+    },
+	disabled: {
+		opacity: 0.2,
       	backgroundColor: '#196ffa',
 		borderColor: '#196ffa',
 		borderRadius: 50,
@@ -424,18 +563,20 @@ const stylesTodoActionButtons = StyleSheet.create({
 
 const stylesTodoActionSwipeLeft = StyleSheet.create({
 	main: {
+		position: 'absolute',
+		flexDirection: 'row',
 		backgroundColor: '#26de81',
-		position: 'relative',
-		height: 66,
-		borderRadius: 8,
+		height: 68,
+		borderRadius: 10,
+		flex: 1,
+		width: '100%',
 		borderColor: '#fff',
 		borderWidth: 1,
-		top: 14,
+		top: 13,
 		right: 14,
 		alignItems: 'center',
 		justifyContent: 'flex-end',
 		padding: 28,
-		flexDirection: 'row',
 	},
 	label: {
 		color: '#fff',

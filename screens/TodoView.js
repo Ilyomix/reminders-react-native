@@ -23,7 +23,7 @@ export function TodoView(props) {
     handleGetTodos,
   } = props;
 
-  const currentTodosTasksNumber = handleGetTodos() && handleGetTodos().length;
+  const currentTodosTasksNumber = handleGetTodos() && handleGetTodos().filter(x => !x.done).length;
 
   return (
     <View style={{ flex: 1 }}>
