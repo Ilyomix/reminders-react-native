@@ -264,7 +264,7 @@ class TodoList extends Component {
 
 			const todoItem = (
 				!(isEdit && idTodoItemToEdit === id) ?
-				<View style={{ opacity: done ? 0.25 : 1, marginTop: !index ? -14 : 0 }}>
+				<View style={{ opacity: done ? 0.25 : 1 }}>
 					<CheckBox
 						style={stylesTodoCard.main}
 						textStyle={done ? stylesTodoCard.contentDone : stylesTodoCard.content}
