@@ -13,6 +13,7 @@ import { Text } from 'react-native-paper';
 import Swipeable from 'react-native-swipeable-row';
 import Icon from 'react-native-vector-icons/Ionicons';
 import IconFR from 'react-native-vector-icons/Feather';
+import IconENT from 'react-native-vector-icons/Entypo';
 
 import Divider from './Divider';
 
@@ -232,10 +233,10 @@ class TodoList extends Component {
 						style={stylesCloseTodoInputButton.main}
 						onPress={this.handleToggleAddingTodo}
 					>
-						<Icon
-							name="ios-return-left"
+						<IconENT
+							name="chevron-thin-right"
 							color="#fff"
-							size={30}
+							size={16}
 						/>
 					</TouchableOpacity>
 				</View>
