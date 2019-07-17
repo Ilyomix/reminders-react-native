@@ -6,8 +6,6 @@ import {
 
 import store from '../store/index.js';
 
-const todos = {};
-
 export function createTodo(todo) {
   return (dispatch) => {
     dispatch({ type: CREATE_TODO, payload: todo });
@@ -27,5 +25,5 @@ export function deleteTodo(id) {
 }
 
 export function getTodos() {
-  return store.getState().todos;
+  return store.getState().app.todos;
 }

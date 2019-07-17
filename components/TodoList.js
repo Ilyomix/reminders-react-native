@@ -263,7 +263,7 @@ class TodoList extends Component {
 
 			const todoItem = (
 				!(isEdit && idTodoItemToEdit === id) ?
-				<View style={{ opacity: done ? 0.25 : 1 }}>
+				<View style={{ opacity: done ? 0.25 : 1, marginTop: !index ? -14 : 0 }}>
 					<CheckBox
 						style={stylesTodoCard.main}
 						textStyle={done ? stylesTodoCard.contentDone : stylesTodoCard.content}
@@ -427,7 +427,8 @@ const stylesTodoCard = StyleSheet.create({
 
 const styleContent = StyleSheet.create({
     main: {
-      padding: 14,
+		marginTop: -14,
+      	padding: 14,
     },
 });
 
@@ -531,8 +532,8 @@ const stylesAddTodoInput = StyleSheet.create({
 const stylesAddTodoPromptWrapper = StyleSheet.create({
 	main: {
 		padding: 14,
-		marginBottom: -28,
-		marginTop: 14,
+		marginBottom: 0,
+		marginTop: 0,
 	}
 })
 

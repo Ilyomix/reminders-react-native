@@ -4,16 +4,22 @@ import {
   DELETE_TODO,
 } from '../constants/Actions';
 
-function todoListReducer(state = [], action) {
+const initialState = {
+  todos: [],
+};
+
+function todoListReducer(state = initialState, action) {
   switch (action.type) {
     case CREATE_TODO:
-      return ([
-        ...state,
-        action.payload,
-      ]);
+      return ({
+        todos: [
+          ...state.todos,
+          action.payload,
+        ],
+      });
 
     case UPDATE_TODO:
-      return (state.filter((x) => {
+      return (state.app.todos.filter((x) => {
         if (x.id === action.payload.id) {
           const xCopy = x;
           xCopy.done = action.payload.done;
@@ -23,8 +29,7 @@ function todoListReducer(state = [], action) {
       }));
 
     case DELETE_TODO:
-      return (state.filter(x => x.id !== action.payload));
-
+      return (state.app.todos.filter(x => x.id !== action.payload));
     default:
       return state;
   }

@@ -9,13 +9,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { mapping, light as lightTheme } from '@eva-design/eva';
 import { ApplicationProvider, Layout } from 'react-native-ui-kitten';
 import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 
 import TodoView from './screens/TodoView';
-import store from './store/index';
+import store, { persistor } from './store/index';
 
 export default function App(props) {
   const [isLoadingComplete, setLoadingComplete] = useState(false);
-
+  console.log(store.getState());
   if (!isLoadingComplete && !props.skipLoadingScreen) {
     return (
       <AppLoading
@@ -27,14 +28,16 @@ export default function App(props) {
   } else {
     return (
       <Provider store={store}>
-        <ApplicationProvider
-          mapping={mapping}
-          theme={lightTheme}>
-          <Layout style={styles.container}>
-            <StatusBar backgroundColor="#c51162" />
-            <TodoView />
-          </Layout>
-        </ApplicationProvider>
+        <PersistGate loading={null} persistor={persistor}>
+          <ApplicationProvider
+            mapping={mapping}
+            theme={lightTheme}>
+            <Layout style={styles.container}>
+              <StatusBar backgroundColor="#c51162" />
+              <TodoView />
+            </Layout>
+          </ApplicationProvider>
+        </PersistGate>
       </Provider>
     );
   }
